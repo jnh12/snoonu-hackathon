@@ -507,8 +507,38 @@
 
       <div class="row">
         <button id="btnLoad" class="btnPrimary">Load Doha dataset</button>
-        <button id="btnStartBaseline" class="btnGhost">Baseline Test</button>
-        <button id="btnStartOba" class="btnGhost">Optimized with Batching</button>
+<button id="btnStartBaseline" class="btnGhost toggleBtn" aria-pressed="false">Baseline Test</button>
+<button id="btnStartOba" class="btnGhost toggleBtn" aria-pressed="false">Optimized with Batching</button>
+
+<style>
+  /* active state for Baseline/OBA buttons */
+  .toggleBtn.isActive{
+    background: rgba(220, 9, 30, 0.10);
+    border-color: rgba(220, 9, 30, 0.35);
+    color: #dc091e;
+    box-shadow: 0 6px 16px rgba(220, 9, 30, 0.12);
+  }
+</style>
+
+<script>
+  // toggle active highlight between the two policy buttons
+  (function(){
+    const b = document.getElementById("btnStartBaseline");
+    const o = document.getElementById("btnStartOba");
+    if (!b || !o) return;
+
+    function setActive(el){
+      for (const x of [b,o]){
+        const on = (x === el);
+        x.classList.toggle("isActive", on);
+        x.setAttribute("aria-pressed", on ? "true" : "false");
+      }
+    }
+
+    b.addEventListener("click", () => setActive(b));
+    o.addEventListener("click", () => setActive(o));
+  })();
+</script>
       </div>
 
       <div class="row">
@@ -517,7 +547,7 @@
         <button id="btnStep">Step</button>
       </div>
 
-      <h3 style="margin: 10px 0 6px;">Today’s KPIs</h3>
+      <h3 style="margin: 10px 0 6px;">Metrics</h3>
       <div class="kpiGrid">
         <div class="kpiCard">
           <div class="kpiLabel">Delivered</div>

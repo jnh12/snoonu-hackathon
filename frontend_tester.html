@@ -1,0 +1,1697 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Snoonu Ops Dashboard – Hackathon Simulation</title>
+
+  <!-- Leaflet (CDN) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    :root{
+      --leftW: 380px;
+      --rightW: 420px;
+
+      --panelBorder: #e6e6e6;
+      --cardBorder: #e9e9e9;
+      --bg: #ffffff;
+      --muted: #666;
+
+      --brand: #0b5cff;
+      --ok: #19a974;
+      --warn: #ff9500;
+      --err: #ff3b30;
+    }
+
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: #111; }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: var(--leftW) 1fr var(--rightW);
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .panel {
+      padding: 14px;
+      overflow: auto;
+      background: #fff;
+    }
+    .panel.left { border-right: 1px solid var(--panelBorder); }
+    .panel.right { border-left: 1px solid var(--panelBorder); }
+
+    .map { height: 100vh; width: 100%; }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; align-items: center; }
+    button {
+      padding: 9px 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    button:hover { background: #f7f7f7; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btnPrimary{
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .btnPrimary:hover{ filter: brightness(0.96); background: var(--brand); }
+    .btnDanger{
+      background: #fff;
+      border-color: #ffd1cf;
+      color: var(--err);
+    }
+    .btnGhost{
+      background: #fff;
+      border-color: #e6e6e6;
+      color: #111;
+    }
+
+    input, select {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+    input[type="number"] { width: 100px; }
+    input[type="checkbox"] { width: auto; }
+
+    .muted { color: var(--muted); font-size: 12px; }
+    .hr { height: 1px; background: #eee; margin: 12px 0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      font-weight: 700;
+    }
+    .dot{ width: 8px; height: 8px; border-radius: 999px; background: #bbb; display: inline-block; }
+    .ok { color: var(--ok); border-color: rgba(25,169,116,0.55); }
+    .ok .dot{ background: var(--ok); }
+    .warn { color: var(--warn); border-color: rgba(255,149,0,0.55); }
+    .warn .dot{ background: var(--warn); }
+    .err { color: var(--err); border-color: rgba(255,59,48,0.55); }
+    .err .dot{ background: var(--err); }
+
+    .hero {
+      background: linear-gradient(180deg, rgba(11,92,255,0.07), rgba(11,92,255,0.00));
+      border: 1px solid rgba(11,92,255,0.15);
+      border-radius: 16px;
+      padding: 12px 12px;
+    }
+    .hero h2{ margin: 0 0 4px; font-size: 18px; }
+    .hero p{ margin: 0; font-size: 12px; color: #4a4a4a; line-height: 1.35; }
+
+    .kpiGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .kpiCard{
+      border: 1px solid var(--cardBorder);
+      border-radius: 16px;
+      padding: 10px 10px;
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+    }
+    .kpiLabel{
+      color: #666;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .kpiValue{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.2px;
+    }
+    .kpiSub{
+      margin-top: 4px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .rightHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 6px 0 10px 0;
+      z-index: 10;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .rightHeader h3{ margin:0; font-size: 16px; }
+    .rightControls{ display:flex; gap: 8px; align-items:center; }
+
+    .tabbar{
+      display:flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .tab{
+      padding: 7px 10px;
+      border: 1px solid #ddd;
+      border-radius: 999px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .tab.active{
+      background: rgba(11,92,255,0.10);
+      border-color: rgba(11,92,255,0.25);
+      color: #0b3ccf;
+    }
+
+    .search {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .cards { display: grid; gap: 10px; padding-bottom: 14px; margin-top: 10px; }
+
+    details.courierCard{
+      border: 1px solid var(--cardBorder);
+      border-radius: 16px;
+      padding: 8px 10px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+      background: #fff;
+    }
+    details.courierCard summary{
+      list-style: none;
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 6px 2px;
+      user-select: none;
+      font-weight: 900;
+      font-size: 14px;
+    }
+    details.courierCard summary::-webkit-details-marker { display:none; }
+
+    .pill{
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #ddd;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.idle{ color: var(--ok); border-color: rgba(25,169,116,0.55); }
+    .pill.busy{ color: var(--warn); border-color: rgba(255,149,0,0.55); }
+    .pill.off{ color:#777; border-color:#bbb; }
+
+    .cardBody{
+      display:grid;
+      gap: 10px;
+      padding: 8px 2px 10px 2px;
+      font-size: 13px;
+      color: #111;
+    }
+    .miniKv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap: 4px 10px;
+      font-size: 13px;
+    }
+    .miniKv .k{ color: #666; font-weight: 800; }
+
+    .chips{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip{
+      border: 1px solid #ddd;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      background: #fafafa;
+      font-weight: 700;
+    }
+    .chip strong{ font-weight: 900; }
+
+    .orderList{
+      display:grid;
+      gap: 8px;
+    }
+    .orderItem{
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 8px 10px;
+      background: #fcfcfc;
+    }
+    .orderTop{
+      display:flex;
+      justify-content:space-between;
+      gap: 8px;
+      align-items:center;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .orderMeta{
+      color:#555;
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: normal;
+    }
+    .btnMini{
+      padding: 7px 9px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .filtersRow{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 10px;
+    }
+    .toggle{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      font-size: 12px;
+      color: #333;
+      padding: 6px 10px;
+      border: 1px solid #e6e6e6;
+      border-radius: 999px;
+      background: #fff;
+      font-weight: 800;
+    }
+
+    #openRightTab{
+      position: fixed;
+      right: 10px;
+      top: 10px;
+      z-index: 9999;
+      display: none;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid #ddd;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      font-weight: 900;
+    }
+
+    .clusterLabel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    pre { background: #0b1020; color: #cfe3ff; padding: 10px; border-radius: 14px; overflow: auto; font-size: 12px; }
+
+    details.advanced{
+      border: 1px solid #eee;
+      border-radius: 16px;
+      padding: 10px 10px;
+      background: #fff;
+    }
+    details.advanced summary{
+      cursor: pointer;
+      font-weight: 900;
+      color: #222;
+      list-style: none;
+    }
+    details.advanced summary::-webkit-details-marker { display:none; }
+
+    .hintBox{
+      border: 1px dashed rgba(11,92,255,0.35);
+      background: rgba(11,92,255,0.05);
+      padding: 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      color: #2b2b2b;
+      line-height: 1.4;
+    }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+
+<body>
+  <button id="openRightTab" title="Show panel">◀ Panel</button>
+
+  <div class="wrap">
+    <!-- LEFT PANEL -->
+    <div class="panel left">
+      <div class="hero">
+        <h2 style="margin:0;">Ops Dashboard</h2>
+        <p>
+          Compare <b>Baseline</b> vs <b>Optimized (OBA)</b> dispatch. Watch fleet movement on the map and track delivery KPIs
+          (speed, delays, batching, cold-risk).
+        </p>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <span id="wsStatus" class="badge warn"><span class="dot"></span>Live updates: disconnected</span>
+        <span id="simStatus" class="badge warn"><span class="dot"></span>Simulation: not loaded</span>
+        <span id="runStatus" class="badge warn"><span class="dot"></span>Run: paused</span>
+      </div>
+
+      <div class="row">
+        <button id="btnLoad" class="btnPrimary">Load Doha dataset</button>
+        <button id="btnStartBaseline" class="btnGhost">Baseline</button>
+        <button id="btnStartOba" class="btnGhost">Optimized (OBA)</button>
+      </div>
+
+      <div class="row">
+        <button id="btnResume" class="btnPrimary">Run</button>
+        <button id="btnPause" class="btnDanger">Pause</button>
+        <button id="btnStep">Step</button>
+      </div>
+
+      <h3 style="margin: 10px 0 6px;">Today’s KPIs</h3>
+      <div class="kpiGrid">
+        <div class="kpiCard">
+          <div class="kpiLabel">Delivered</div>
+          <div id="kDeliveredBig" class="kpiValue">-</div>
+          <div id="kDeliveredSub" class="kpiSub">-</div>
+        </div>
+        <div class="kpiCard">
+          <div class="kpiLabel">On-time rate</div>
+          <div id="kOnTimeRate" class="kpiValue">-</div>
+          <div id="kOnTimeSub" class="kpiSub">-</div>
+        </div>
+        <div class="kpiCard">
+          <div class="kpiLabel">Avg delivery time</div>
+          <div id="kAvgDel" class="kpiValue">-</div>
+          <div id="kP90Del" class="kpiSub">-</div>
+        </div>
+        <div class="kpiCard">
+          <div class="kpiLabel">Cold-risk (time-in-bag)</div>
+          <div id="kColdRisk" class="kpiValue">-</div>
+          <div id="kColdSub" class="kpiSub">-</div>
+        </div>
+        <div class="kpiCard">
+          <div class="kpiLabel">Batching</div>
+          <div id="kBatchRate" class="kpiValue">-</div>
+          <div id="kBatchSub" class="kpiSub">-</div>
+        </div>
+        <div class="kpiCard">
+          <div class="kpiLabel">Fleet utilization</div>
+          <div id="kUtil" class="kpiValue">-</div>
+          <div id="kUtilSub" class="kpiSub">-</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 style="margin: 0 0 6px;">Map overlays</h3>
+      <div class="row" style="margin-top:6px;">
+        <label class="toggle">
+          <input id="showClusters" type="checkbox" checked />
+          Show order clusters
+        </label>
+        <label class="toggle">
+          <input id="sameRestaurantOnly" type="checkbox" checked />
+          Same restaurant only
+        </label>
+      </div>
+      <div class="muted">
+        Clusters use pickup 1000m + dropoff 1600m radii (matches default config).
+      </div>
+
+      <div class="hr"></div>
+
+      <details class="advanced">
+        <summary>Advanced controls (keep for dev / hackathon)</summary>
+
+        <div class="row" style="margin-top:10px;">
+          <button id="btnConnect">Connect live updates (WS)</button>
+          <button id="btnDisconnect">Disconnect</button>
+        </div>
+
+        <div class="hintBox">
+          <b>Run mode:</b> This UI “Run” button steps the sim by calling <span class="mono">/sim/step</span> repeatedly.
+        </div>
+
+        <div class="row">
+          <label class="muted">tick_ms</label>
+          <input id="tickMs" type="number" value="500" min="50" step="50"/>
+          <label class="muted">dt_sec</label>
+          <input id="dtSec" type="number" value="10" min="1" step="1"/>
+        </div>
+
+        <div class="row">
+          <label class="muted">spawn orders</label>
+          <input id="spawnOrders" type="number" value="5" min="0" step="1"/>
+          <label class="muted">spawn couriers</label>
+          <input id="spawnCouriers" type="number" value="2" min="0" step="1"/>
+          <button id="btnSpawn">Spawn random</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3 style="margin: 0 0 6px;">Raw Snapshot KPIs</h3>
+        <div class="muted">This mirrors backend snapshot values (debugging).</div>
+        <div class="row" style="margin-top: 8px;">
+          <div class="miniKv" style="grid-template-columns: 140px 1fr; width: 100%;">
+            <div class="k">sim_t</div><div id="kSimT">-</div>
+            <div class="k">policy</div><div id="kPolicy">-</div>
+            <div class="k">pending</div><div id="kPending">-</div>
+            <div class="k">idle</div><div id="kIdle">-</div>
+            <div class="k">busy</div><div id="kBusy">-</div>
+            <div class="k">delivered</div><div id="kDelivered">-</div>
+            <div class="k">total_distance_km</div><div id="kDist">-</div>
+            <div class="k">avg_late_min</div><div id="kLate">-</div>
+            <div class="k">avg_wait_min</div><div id="kWait">-</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3 style="margin: 0 0 6px;">Last message (raw)</h3>
+        <pre id="log">{}</pre>
+      </details>
+    </div>
+
+    <!-- MAP -->
+    <div id="map" class="map"></div>
+
+    <!-- RIGHT PANEL -->
+    <div id="rightPanel" class="panel right">
+      <div class="rightHeader">
+        <h3 id="rightTitle">Panel</h3>
+        <div class="rightControls">
+          <button id="btnCollapseRight" class="btnMini" title="Hide panel">Hide</button>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <button id="tabCouriers" class="tab active">Couriers</button>
+        <button id="tabCompleted" class="tab">Completed Orders</button>
+        <button id="tabKpis" class="tab">KPI Details</button>
+      </div>
+
+      <!-- Couriers tab -->
+      <div id="viewCouriers">
+        <input id="courierSearch" class="search" placeholder="Search courier / order id…" />
+        <div class="hr"></div>
+        <div id="courierCards" class="cards"></div>
+      </div>
+
+      <!-- Completed orders tab -->
+      <div id="viewCompleted" style="display:none;">
+        <input id="completedSearch" class="search" placeholder="Search delivered orders (order id / courier / restaurant) …" />
+
+        <div class="filtersRow">
+          <label class="toggle" title="Only show late delivered orders">
+            <input id="filterLateOnly" type="checkbox" />
+            Late only
+          </label>
+          <label class="toggle" title="Only show batched deliveries (bundles)">
+            <input id="filterBatchOnly" type="checkbox" />
+            Batched only
+          </label>
+          <label class="toggle" title="Only show cold-risk orders (time-in-bag above threshold)">
+            <input id="filterColdOnly" type="checkbox" />
+            Cold-risk only
+          </label>
+        </div>
+
+        <div class="hr"></div>
+        <div id="completedCards" class="cards"></div>
+      </div>
+
+      <!-- KPI details tab -->
+      <div id="viewKpis" style="display:none;">
+        <div class="muted" style="margin-top: 10px;">
+          Deeper KPI breakdown and any extra KPI fields coming from backend.
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="kpiDetails" class="cards"></div>
+
+        <div class="hr"></div>
+
+        <div class="muted"><b>Backend KPI fields (raw):</b></div>
+        <pre id="backendKpisRaw">{}</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === CONFIG ===
+    const API_BASE = "http://127.0.0.1:8000";
+    const WS_URL = "ws://127.0.0.1:8000/ws/state";
+
+    // Frontend cluster config (matches SimConfig defaults)
+    const CLUSTER_CFG = {
+      pickup_cluster_radius_m: 1000,
+      dropoff_cluster_radius_m: 1600,
+    };
+
+    // Risk / thresholds (frontend defaults; will use backend fields if present)
+    const DEFAULTS = {
+      max_time_in_bag_sec: 30 * 60,
+    };
+
+    // === MAP ===
+    const map = L.map("map").setView([25.2854, 51.5310], 12); // Doha
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const courierLayer = L.layerGroup().addTo(map);
+    const stopLayer = L.layerGroup().addTo(map);
+    const lineLayer = L.layerGroup().addTo(map);
+
+    // clusters/orders layers
+    const clusterLayer = L.layerGroup().addTo(map);
+    const orderLayer = L.layerGroup().addTo(map);
+    const clusterLineLayer = L.layerGroup().addTo(map);
+
+    function colorForCourierStatus(status) {
+      if (status === "IDLE") return "#19a974";
+      if (status === "BUSY") return "#ff9500";
+      return "#8e8e93";
+    }
+    function colorForStopType(type) {
+      if (type === "pickup") return "#2d7ff9";
+      if (type === "dropoff") return "#b200ff";
+      return "#111";
+    }
+
+    // Cluster palette
+    const CLUSTER_COLORS = [
+      "#e6194B","#3cb44b","#4363d8","#f58231","#911eb4","#46f0f0",
+      "#f032e6","#bcf60c","#fabebe","#008080","#e6beff","#9A6324"
+    ];
+
+    // === UI state ===
+    let ws = null;
+    let stepTimer = null;
+    let lastSnapshot = null;
+
+    // order_id -> history
+    // {
+    //   assigned_courier_id,
+    //   bundle_size_max,
+    //   ever_batched,
+    //   bundle_id_last,
+    //   pickup_eta_sec,
+    //   dropoff_eta_sec,
+    //   first_assigned_sim_t,
+    //   last_seen_sim_t
+    // }
+    const orderHistory = new Map();
+
+    function setBadge(el, text, cls) {
+      el.innerHTML = `<span class="dot"></span>${text}`;
+      el.classList.remove("ok","warn","err");
+      el.classList.add(cls);
+    }
+
+    const wsStatus = document.getElementById("wsStatus");
+    const simStatus = document.getElementById("simStatus");
+    const runStatus = document.getElementById("runStatus");
+    const logEl = document.getElementById("log");
+
+    function setRunning(isRunning) {
+      if (isRunning) setBadge(runStatus, "Run: running", "ok");
+      else setBadge(runStatus, "Run: paused", "warn");
+    }
+
+    // === RIGHT PANEL COLLAPSE ===
+    const rightPanel = document.getElementById("rightPanel");
+    const openRightTab = document.getElementById("openRightTab");
+    let rightCollapsed = false;
+
+    function setRightCollapsed(collapsed) {
+      rightCollapsed = collapsed;
+      document.documentElement.style.setProperty("--rightW", collapsed ? "0px" : "420px");
+      rightPanel.style.display = collapsed ? "none" : "block";
+      openRightTab.style.display = collapsed ? "block" : "none";
+    }
+
+    document.getElementById("btnCollapseRight").onclick = () => setRightCollapsed(true);
+    openRightTab.onclick = () => setRightCollapsed(false);
+
+    // === Tabs ===
+    const tabCouriers = document.getElementById("tabCouriers");
+    const tabCompleted = document.getElementById("tabCompleted");
+    const tabKpis = document.getElementById("tabKpis");
+
+    const viewCouriers = document.getElementById("viewCouriers");
+    const viewCompleted = document.getElementById("viewCompleted");
+    const viewKpis = document.getElementById("viewKpis");
+    const rightTitle = document.getElementById("rightTitle");
+
+    function setActiveTab(name){
+      for (const el of [tabCouriers, tabCompleted, tabKpis]) el.classList.remove("active");
+      viewCouriers.style.display = "none";
+      viewCompleted.style.display = "none";
+      viewKpis.style.display = "none";
+
+      if (name === "couriers"){
+        tabCouriers.classList.add("active");
+        viewCouriers.style.display = "block";
+        rightTitle.textContent = "Couriers";
+      } else if (name === "completed"){
+        tabCompleted.classList.add("active");
+        viewCompleted.style.display = "block";
+        rightTitle.textContent = "Completed Orders";
+      } else {
+        tabKpis.classList.add("active");
+        viewKpis.style.display = "block";
+        rightTitle.textContent = "KPI Details";
+      }
+
+      if (lastSnapshot) renderSnapshot(lastSnapshot);
+    }
+
+    tabCouriers.onclick = () => setActiveTab("couriers");
+    tabCompleted.onclick = () => setActiveTab("completed");
+    tabKpis.onclick = () => setActiveTab("kpis");
+
+    // === WS (receive-only) ===
+    function connectWS() {
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => setBadge(wsStatus, "Live updates: connected", "ok");
+      ws.onclose = () => setBadge(wsStatus, "Live updates: disconnected", "warn");
+      ws.onerror = () => setBadge(wsStatus, "Live updates: error", "err");
+
+      ws.onmessage = (ev) => {
+        let data;
+        try { data = JSON.parse(ev.data); } catch (e) { return; }
+        if (data && data.type === "ping") return;
+
+        logEl.textContent = JSON.stringify(data, null, 2);
+
+        if (data && data.detail && String(data.detail).toLowerCase().includes("not loaded")) {
+          setBadge(simStatus, "Simulation: not loaded", "warn");
+          return;
+        }
+
+        if (data && typeof data.sim_t !== "undefined") {
+          setBadge(simStatus, "Simulation: loaded", "ok");
+          lastSnapshot = data;
+          renderSnapshot(data);
+        }
+      };
+    }
+
+    function disconnectWS() {
+      if (ws) ws.close();
+      ws = null;
+    }
+
+    // === HTTP helpers ===
+    async function postJson(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`${res.status} ${res.statusText}: ${txt}`);
+      }
+      return res.json();
+    }
+
+    async function getJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`${res.status} ${res.statusText}: ${txt}`);
+      }
+      return res.json();
+    }
+
+    function log(obj) {
+      logEl.textContent = JSON.stringify(obj, null, 2);
+    }
+
+    // === GEO ===
+    function haversineKm(a, b) {
+      const [lat1, lon1] = a;
+      const [lat2, lon2] = b;
+      const R = 6371.0;
+      const toRad = (x) => x * Math.PI / 180.0;
+
+      const phi1 = toRad(lat1);
+      const phi2 = toRad(lat2);
+      const dphi = toRad(lat2 - lat1);
+      const dl = toRad(lon2 - lon1);
+
+      const x = Math.sin(dphi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dl / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(x));
+    }
+
+    function fmtTimeHMS(sec){
+      if (sec == null || !isFinite(sec)) return "-";
+      sec = Math.max(0, Math.floor(sec));
+      const h = String(Math.floor(sec/3600)).padStart(2,"0");
+      const m = String(Math.floor((sec%3600)/60)).padStart(2,"0");
+      const s = String(sec%60).padStart(2,"0");
+      return `${h}:${m}:${s}`;
+    }
+    function fmtMin(sec){
+      if (sec == null || !isFinite(sec)) return "-";
+      return (sec/60).toFixed(1) + " min";
+    }
+    function pct(x){
+      if (x == null || !isFinite(x)) return "-";
+      return (x*100).toFixed(1) + "%";
+    }
+
+    // === CLUSTERING (frontend mirror) ===
+    function restKey(o){
+      return String(o.pickup_label || "").trim().toLowerCase();
+    }
+
+    function clusterOrders(orders, pickupRadM, dropRadM, sameRestaurantOnly){
+      const pickupRadKm = pickupRadM / 1000.0;
+      const dropRadKm = dropRadM / 1000.0;
+      const n = orders.length;
+      if (n === 0) return [];
+
+      const adj = Array.from({length:n}, () => []);
+      for (let i=0;i<n;i++){
+        for (let j=i+1;j<n;j++){
+          const oi = orders[i], oj = orders[j];
+
+          if (sameRestaurantOnly && restKey(oi) !== restKey(oj)) continue;
+
+          const dp = haversineKm([oi.pickup_lat, oi.pickup_lng], [oj.pickup_lat, oj.pickup_lng]);
+          if (dp > pickupRadKm) continue;
+
+          const dd = haversineKm([oi.dropoff_lat, oi.dropoff_lng], [oj.dropoff_lat, oj.dropoff_lng]);
+          if (dd > dropRadKm) continue;
+
+          adj[i].push(j);
+          adj[j].push(i);
+        }
+      }
+
+      const seen = Array(n).fill(false);
+      const clusters = [];
+      for (let i=0;i<n;i++){
+        if (seen[i]) continue;
+        const stack = [i];
+        seen[i] = true;
+        const comp = [];
+        while (stack.length){
+          const u = stack.pop();
+          comp.push(orders[u]);
+          for (const v of adj[u]){
+            if (!seen[v]){
+              seen[v] = true;
+              stack.push(v);
+            }
+          }
+        }
+        clusters.push(comp);
+      }
+
+      clusters.sort((a,b) => b.length - a.length);
+      return clusters;
+    }
+
+    function centroidLatLng(points){
+      let lat=0, lng=0;
+      for (const p of points){ lat += p[0]; lng += p[1]; }
+      return [lat/points.length, lng/points.length];
+    }
+
+    function clearClusters(){
+      clusterLayer.clearLayers();
+      orderLayer.clearLayers();
+      clusterLineLayer.clearLayers();
+    }
+
+    function renderClustersFromSnapshot(snap){
+      clearClusters();
+
+      const show = document.getElementById("showClusters").checked;
+      if (!show) return;
+
+      const sameRestaurantOnly = document.getElementById("sameRestaurantOnly").checked;
+
+      const pendingNow = (snap.orders || []).filter(o =>
+        o.status === "PENDING" && typeof o.created_sec !== "undefined" && o.created_sec <= snap.sim_t
+      );
+
+      if (pendingNow.length === 0) return;
+
+      const clusters = clusterOrders(
+        pendingNow,
+        CLUSTER_CFG.pickup_cluster_radius_m,
+        CLUSTER_CFG.dropoff_cluster_radius_m,
+        sameRestaurantOnly
+      );
+
+      clusters.forEach((cluster, idx) => {
+        const color = CLUSTER_COLORS[idx % CLUSTER_COLORS.length];
+
+        const pickPts = cluster.map(o => [o.pickup_lat, o.pickup_lng]);
+        const dropPts = cluster.map(o => [o.dropoff_lat, o.dropoff_lng]);
+        const pickC = centroidLatLng(pickPts);
+        const dropC = centroidLatLng(dropPts);
+
+        L.circle(pickC, {
+          radius: CLUSTER_CFG.pickup_cluster_radius_m,
+          color,
+          weight: 2,
+          fillColor: color,
+          fillOpacity: 0.06
+        }).addTo(clusterLayer);
+
+        L.circle(dropC, {
+          radius: CLUSTER_CFG.dropoff_cluster_radius_m,
+          color,
+          weight: 1,
+          fillColor: color,
+          fillOpacity: 0.03,
+          dashArray: "5 6"
+        }).addTo(clusterLayer);
+
+        const labelIcon = L.divIcon({
+          className: "",
+          html: `<div class="clusterLabel" style="border-color:${color};">C${idx+1} · ${cluster.length}</div>`,
+          iconSize: [1, 1]
+        });
+        L.marker(pickC, { icon: labelIcon }).addTo(clusterLayer);
+
+        cluster.forEach(o => {
+          L.circleMarker([o.pickup_lat, o.pickup_lng], {
+            radius: 4,
+            weight: 2,
+            color,
+            fillColor: color,
+            fillOpacity: 0.9
+          }).addTo(orderLayer);
+
+          L.polyline([pickC, [o.pickup_lat, o.pickup_lng]], {
+            color,
+            weight: 1,
+            opacity: 0.35
+          }).addTo(clusterLineLayer);
+        });
+      });
+    }
+
+    // === Robust batching extraction helpers ===
+    function normalizeAssignedOrderIds(route){
+      if (!route) return [];
+      let ids =
+        route.assigned_order_ids ??
+        route.assignedOrderIds ??
+        route.order_ids ??
+        route.orderIds ??
+        route.orders ??
+        route.assigned_orders ??
+        route.assignedOrders ??
+        [];
+
+      if (!Array.isArray(ids)) return [];
+
+      // If it's array of objects, try common fields
+      if (ids.length && typeof ids[0] === "object" && ids[0] !== null) {
+        ids = ids.map(x => x.order_id ?? x.orderId ?? x.id ?? null).filter(Boolean);
+      }
+      // Cast to string for consistent Map keys
+      return ids.map(x => String(x));
+    }
+
+    function stopEtaField(st){
+      return st?.eta_sec ?? st?.etaSec ?? st?.depart_sec ?? st?.departSec ?? st?.arrive_sec ?? st?.arriveSec ?? null;
+    }
+
+    // === Order history ingestion (FIXED batching) ===
+    function ingestOrderHistoryFromSnapshot(snap){
+      const simT = snap.sim_t ?? 0;
+      const couriers = snap.couriers || [];
+
+      for (const c of couriers){
+        const route = c.route || null;
+        if (!route) continue;
+
+        const assigned = normalizeAssignedOrderIds(route);
+        const bundleSizeNow = assigned.length;
+        const isBatchedNow = bundleSizeNow > 1;
+
+        // Build a stable-ish bundle id (best-effort)
+        const bundleId =
+          route.bundle_id ?? route.bundleId ??
+          route.route_id ?? route.routeId ??
+          `${c.courier_id}:${route.start_sec ?? route.startSec ?? simT}`;
+
+        // per-order pickup/dropoff times from stops
+        const perOrder = new Map();
+        const stops = route.stops || [];
+        for (const st of stops){
+          const oid = String(st.order_id ?? st.orderId ?? "");
+          if (!oid) continue;
+          if (!perOrder.has(oid)) perOrder.set(oid, { pickupEta: null, dropEta: null });
+          const rec = perOrder.get(oid);
+          const eta = stopEtaField(st);
+          const type = st.type;
+          if (type === "pickup") rec.pickupEta = eta;
+          if (type === "dropoff") rec.dropEta = eta;
+        }
+
+        for (const oid of assigned){
+          const existing = orderHistory.get(oid) || {};
+          const times = perOrder.get(oid) || { pickupEta: null, dropEta: null };
+
+          const prevMax = existing.bundle_size_max ?? 1;
+          const newMax = Math.max(prevMax, bundleSizeNow || 1);
+
+          orderHistory.set(oid, {
+            assigned_courier_id: existing.assigned_courier_id ?? c.courier_id,
+            bundle_size_max: newMax,
+            ever_batched: Boolean(existing.ever_batched || isBatchedNow),
+            bundle_id_last: bundleId,
+            pickup_eta_sec: (times.pickupEta ?? existing.pickup_eta_sec ?? null),
+            dropoff_eta_sec: (times.dropEta ?? existing.dropoff_eta_sec ?? null),
+            first_assigned_sim_t: existing.first_assigned_sim_t ?? simT,
+            last_seen_sim_t: simT,
+          });
+        }
+      }
+
+      // Capture explicit batching fields if backend provides them on orders
+      for (const o of (snap.orders || [])){
+        const oid = o.order_id ?? o.orderId ?? null;
+        if (!oid) continue;
+        const key = String(oid);
+
+        const existing = orderHistory.get(key) || {};
+
+        const explicitBundleId = o.bundle_id ?? o.bundleId ?? o.batch_id ?? o.batchId ?? null;
+        const explicitBundleSize =
+          o.bundle_size ?? o.bundleSize ??
+          o.assigned_bundle_size ?? o.assignedBundleSize ??
+          o.batch_size ?? o.batchSize ??
+          null;
+
+        const explicitIsBatched =
+          (o.is_batched ?? o.isBatched ?? null);
+
+        const mergedEverBatched =
+          Boolean(existing.ever_batched ||
+                  explicitIsBatched === true ||
+                  (explicitBundleSize != null && Number(explicitBundleSize) > 1) ||
+                  (explicitBundleId != null));
+
+        const mergedMax =
+          Math.max(existing.bundle_size_max ?? 1, explicitBundleSize != null ? Number(explicitBundleSize) : 1);
+
+        orderHistory.set(key, {
+          ...existing,
+          assigned_courier_id: existing.assigned_courier_id ?? o.assigned_courier_id ?? o.assignedCourierId ?? null,
+          bundle_id_last: existing.bundle_id_last ?? explicitBundleId ?? null,
+          bundle_size_max: mergedMax,
+          ever_batched: mergedEverBatched,
+          last_seen_sim_t: snap.sim_t ?? existing.last_seen_sim_t,
+        });
+      }
+    }
+
+    // === COURIER CARDS (right panel) ===
+    function pillClassForStatus(status){
+      if (status === "BUSY") return "pill busy";
+      if (status === "IDLE") return "pill idle";
+      return "pill off";
+    }
+    function statusLabel(status){
+      if (status === "BUSY") return "BUSY";
+      if (status === "IDLE") return "IDLE";
+      return "OFFLINE";
+    }
+
+    function makeEl(tag, attrs={}, children=[]) {
+      const el = document.createElement(tag);
+      for (const [k,v] of Object.entries(attrs)){
+        if (k === "class") el.className = v;
+        else if (k === "html") el.innerHTML = v;
+        else if (k === "style") el.setAttribute("style", v);
+        else el.setAttribute(k, v);
+      }
+      for (const ch of children){
+        if (typeof ch === "string") el.appendChild(document.createTextNode(ch));
+        else if (ch) el.appendChild(ch);
+      }
+      return el;
+    }
+
+    function renderCourierCards(snap){
+      const container = document.getElementById("courierCards");
+      const q = (document.getElementById("courierSearch").value || "").trim().toLowerCase();
+
+      const orders = snap.orders || [];
+      const orderById = new Map(orders.map(o => [String(o.order_id), o]));
+      const couriers = (snap.couriers || []).slice();
+
+      const rank = (s) => s === "BUSY" ? 0 : (s === "IDLE" ? 1 : 2);
+      couriers.sort((a,b) => (rank(a.status) - rank(b.status)) || String(a.courier_id).localeCompare(String(b.courier_id)));
+
+      container.innerHTML = "";
+
+      for (const c of couriers){
+        const assigned = normalizeAssignedOrderIds(c.route || {});
+        const searchable = [
+          c.courier_id,
+          c.status,
+          c.vehicle_type,
+          ...assigned
+        ].join(" ").toLowerCase();
+
+        if (q && !searchable.includes(q)) continue;
+
+        const details = makeEl("details", { class: "courierCard" });
+        if (c.status === "BUSY") details.open = true;
+
+        const left = makeEl("div", {}, [String(c.courier_id)]);
+        const pill = makeEl("span", { class: pillClassForStatus(c.status) }, [statusLabel(c.status)]);
+        const summary = makeEl("summary", {}, [left, pill]);
+
+        const body = makeEl("div", { class: "cardBody" });
+
+        const kv = makeEl("div", { class: "miniKv" }, [
+          makeEl("div", { class: "k" }, ["Vehicle"]), makeEl("div", {}, [String(c.vehicle_type || "-")]),
+          makeEl("div", { class: "k" }, ["Capacity"]), makeEl("div", {}, [String(c.bundle_capacity ?? "-")]),
+          makeEl("div", { class: "k" }, ["Location"]), makeEl("div", {}, [`${Number(c.lat).toFixed(5)}, ${Number(c.lng).toFixed(5)}`]),
+          makeEl("div", { class: "k" }, ["Busy until"]), makeEl("div", {}, [c.busy_until_sec != null ? fmtTimeHMS(c.busy_until_sec) : "-"]),
+        ]);
+
+        const actions = makeEl("div", { class: "row", style: "margin:0;" }, [
+          makeEl("button", { class: "btnMini", type:"button" }, ["Center on map"]),
+        ]);
+        actions.querySelector("button").onclick = () => {
+          map.setView([c.lat, c.lng], Math.max(map.getZoom(), 14), { animate: true });
+        };
+
+        body.appendChild(kv);
+        body.appendChild(actions);
+
+        const chipRow = makeEl("div", { class: "chips" });
+        chipRow.appendChild(makeEl("div", { class:"chip" }, [
+          "Orders: ",
+          makeEl("strong", {}, [String(assigned.length)])
+        ]));
+
+        const isBatchNow = assigned.length > 1;
+        chipRow.appendChild(makeEl("div", { class:"chip" }, [
+          "Batch now: ",
+          makeEl("strong", {}, [isBatchNow ? `Yes (${assigned.length})` : "No"])
+        ]));
+
+        if (c.route?.finish_sec != null) {
+          chipRow.appendChild(makeEl("div", { class:"chip" }, [
+            "Finish: ",
+            makeEl("strong", {}, [fmtTimeHMS(c.route.finish_sec)])
+          ]));
+        }
+        body.appendChild(chipRow);
+
+        if (assigned.length > 0){
+          const list = makeEl("div", { class: "orderList" });
+          for (const oid of assigned){
+            const o = orderById.get(String(oid));
+
+            const topRight = makeEl("span", { class:"pill off" }, [String(o?.status ?? "unknown")]);
+
+            const top = makeEl("div", { class:"orderTop" }, [
+              makeEl("div", {}, [String(oid)]),
+              topRight
+            ]);
+
+            const meta = makeEl("div", { class:"orderMeta" }, [
+              `Pickup: ${o?.pickup_label ?? "-"}\n`,
+              makeEl("br"),
+              `Dropoff: ${o?.dropoff_label ?? "-"}\n`,
+              makeEl("br"),
+              `Ready: ${fmtTimeHMS(o?.ready_sec)} · Promised: ${fmtTimeHMS(o?.promised_sec)}`
+            ]);
+
+            const btns = makeEl("div", { class:"row", style:"margin:8px 0 0 0;" }, [
+              makeEl("button", { class:"btnMini", type:"button" }, ["Show pickup"]),
+              makeEl("button", { class:"btnMini", type:"button" }, ["Show dropoff"]),
+            ]);
+
+            const [bp, bd] = btns.querySelectorAll("button");
+            bp.onclick = () => { if (o) map.setView([o.pickup_lat, o.pickup_lng], Math.max(map.getZoom(), 14), {animate:true}); };
+            bd.onclick = () => { if (o) map.setView([o.dropoff_lat, o.dropoff_lng], Math.max(map.getZoom(), 14), {animate:true}); };
+
+            const item = makeEl("div", { class:"orderItem" }, [top, meta, btns]);
+            list.appendChild(item);
+          }
+          body.appendChild(list);
+        } else {
+          body.appendChild(makeEl("div", { class:"muted" }, ["No assigned orders."]));
+        }
+
+        details.appendChild(summary);
+        details.appendChild(body);
+        container.appendChild(details);
+      }
+
+      if (!container.children.length){
+        container.appendChild(makeEl("div", { class:"muted" }, ["No couriers match your search."]));
+      }
+    }
+
+    // === Completed Orders tab (FIXED batching) ===
+    function isOrderBatched(o, hist){
+      const explicitIsBatched = (o.is_batched ?? o.isBatched ?? null);
+      const explicitSize =
+        o.bundle_size ?? o.bundleSize ??
+        o.assigned_bundle_size ?? o.assignedBundleSize ??
+        o.batch_size ?? o.batchSize ??
+        null;
+
+      if (explicitIsBatched === true) return { batched: true, size: Math.max(Number(explicitSize || 2), 2) };
+      const maxSeen = hist?.bundle_size_max ?? 1;
+      const ever = Boolean(hist?.ever_batched);
+      const size = Math.max(maxSeen, explicitSize != null ? Number(explicitSize) : 1);
+      return { batched: (ever || size > 1), size };
+    }
+
+    function renderCompletedOrders(snap){
+      const container = document.getElementById("completedCards");
+      const q = (document.getElementById("completedSearch").value || "").trim().toLowerCase();
+
+      const lateOnly = document.getElementById("filterLateOnly").checked;
+      const batchOnly = document.getElementById("filterBatchOnly").checked;
+      const coldOnly = document.getElementById("filterColdOnly").checked;
+
+      const orders = (snap.orders || []).slice();
+      const delivered = orders.filter(o => o.status === "DELIVERED" && o.delivered_sec != null);
+
+      delivered.sort((a,b) => (b.delivered_sec ?? 0) - (a.delivered_sec ?? 0));
+
+      const bagThreshold = (snap?.kpis?.max_time_in_bag_sec ?? snap?.kpis?.cold_threshold_sec ?? DEFAULTS.max_time_in_bag_sec);
+
+      container.innerHTML = "";
+
+      for (const o of delivered){
+        const hist = orderHistory.get(String(o.order_id)) || {};
+        const deliveredSec = o.delivered_sec ?? null;
+
+        const deliverySec = (deliveredSec != null && o.created_sec != null) ? (deliveredSec - o.created_sec) : null;
+        const lateSec = (deliveredSec != null && o.promised_sec != null) ? Math.max(0, deliveredSec - o.promised_sec) : null;
+
+        const batchInfo = isOrderBatched(o, hist);
+        const isBatch = batchInfo.batched;
+        const bundleSize = batchInfo.size;
+
+        const pickupEta = hist.pickup_eta_sec ?? null;
+        const dropEta = hist.dropoff_eta_sec ?? null;
+        const tib = (pickupEta != null && dropEta != null) ? (dropEta - pickupEta) : null;
+        const coldRisk = (tib != null) ? (tib > bagThreshold) : false;
+
+        if (lateOnly && !(lateSec != null && lateSec > 0)) continue;
+        if (batchOnly && !isBatch) continue;
+        if (coldOnly && !coldRisk) continue;
+
+        const searchable = [
+          o.order_id,
+          o.assigned_courier_id,
+          o.pickup_label,
+          o.dropoff_label
+        ].join(" ").toLowerCase();
+        if (q && !searchable.includes(q)) continue;
+
+        const titleRight = coldRisk
+          ? makeEl("span", { class:"pill busy" }, ["Cold-risk"])
+          : (lateSec != null && lateSec > 0)
+            ? makeEl("span", { class:"pill busy" }, ["Late"])
+            : makeEl("span", { class:"pill idle" }, ["On time"]);
+
+        const top = makeEl("div", { class:"orderTop" }, [
+          makeEl("div", {}, [String(o.order_id)]),
+          titleRight
+        ]);
+
+        const chips = makeEl("div", { class:"chips" }, [
+          makeEl("div", { class:"chip" }, ["Courier: ", makeEl("strong", {}, [String(o.assigned_courier_id || hist.assigned_courier_id || "-")])]),
+          makeEl("div", { class:"chip" }, ["Batch: ", makeEl("strong", {}, [isBatch ? `Yes (${bundleSize})` : "No"])]),
+          makeEl("div", { class:"chip" }, ["Delivery: ", makeEl("strong", {}, [deliverySec != null ? fmtMin(deliverySec) : "-"])]),
+          makeEl("div", { class:"chip" }, ["Late: ", makeEl("strong", {}, [lateSec != null ? fmtMin(lateSec) : "-"])]),
+          makeEl("div", { class:"chip" }, ["Time-in-bag: ", makeEl("strong", {}, [tib != null ? fmtMin(tib) : "-"])]),
+        ]);
+
+        const meta = makeEl("div", { class:"orderMeta" }, [
+          makeEl("div", {}, [`Pickup: ${o.pickup_label || "-"}`]),
+          makeEl("div", {}, [`Dropoff: ${o.dropoff_label || "-"}`]),
+          makeEl("div", {}, [
+            `Created: ${fmtTimeHMS(o.created_sec)} · Ready: ${fmtTimeHMS(o.ready_sec)} · Promised: ${fmtTimeHMS(o.promised_sec)} · Delivered: ${fmtTimeHMS(o.delivered_sec)}`
+          ]),
+        ]);
+
+        const btns = makeEl("div", { class:"row", style:"margin:8px 0 0 0;" }, [
+          makeEl("button", { class:"btnMini", type:"button" }, ["Show pickup"]),
+          makeEl("button", { class:"btnMini", type:"button" }, ["Show dropoff"]),
+        ]);
+
+        const [bp, bd] = btns.querySelectorAll("button");
+        bp.onclick = () => map.setView([o.pickup_lat, o.pickup_lng], Math.max(map.getZoom(), 14), {animate:true});
+        bd.onclick = () => map.setView([o.dropoff_lat, o.dropoff_lng], Math.max(map.getZoom(), 14), {animate:true});
+
+        const card = makeEl("div", { class:"orderItem" }, [top, chips, meta, btns]);
+        container.appendChild(card);
+      }
+
+      if (!container.children.length){
+        container.appendChild(makeEl("div", { class:"muted" }, ["No delivered orders match your filters/search yet."]));
+      }
+    }
+
+    // === KPI computation (frontend derived + backend raw) ===
+    function percentile(sortedArr, p){
+      if (!sortedArr.length) return null;
+      const idx = (sortedArr.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      if (lo === hi) return sortedArr[lo];
+      const w = idx - lo;
+      return sortedArr[lo] * (1 - w) + sortedArr[hi] * w;
+    }
+
+    function computeDerivedKpis(snap){
+      const orders = snap.orders || [];
+      const couriers = snap.couriers || [];
+      const delivered = orders.filter(o => o.status === "DELIVERED" && o.delivered_sec != null);
+
+      const deliveredTimes = [];
+      const lateSecs = [];
+      const tibSecs = [];
+
+      const bagThreshold = (snap?.kpis?.max_time_in_bag_sec ?? snap?.kpis?.cold_threshold_sec ?? DEFAULTS.max_time_in_bag_sec);
+
+      let onTime = 0;
+      let batchDeliveredCount = 0;
+      let coldRiskCount = 0;
+
+      for (const o of delivered){
+        const oid = String(o.order_id);
+        const hist = orderHistory.get(oid) || {};
+
+        const deliveredSec = o.delivered_sec;
+        const createdSec = o.created_sec;
+        const promisedSec = o.promised_sec;
+
+        if (deliveredSec != null && createdSec != null){
+          deliveredTimes.push(deliveredSec - createdSec);
+        }
+        if (deliveredSec != null && promisedSec != null){
+          const l = Math.max(0, deliveredSec - promisedSec);
+          lateSecs.push(l);
+          if (l === 0) onTime++;
+        }
+
+        // time-in-bag (if we have it)
+        const pickupEta = hist.pickup_eta_sec ?? null;
+        const dropEta = hist.dropoff_eta_sec ?? null;
+        if (pickupEta != null && dropEta != null){
+          const tib = dropEta - pickupEta;
+          tibSecs.push(tib);
+          if (tib > bagThreshold) coldRiskCount++;
+        }
+
+        // batching (FIXED): rely on route-derived "ever_batched" / bundle_size_max / explicit fields
+        const batchInfo = isOrderBatched(o, hist);
+        if (batchInfo.batched) batchDeliveredCount++;
+      }
+
+      deliveredTimes.sort((a,b)=>a-b);
+      lateSecs.sort((a,b)=>a-b);
+      tibSecs.sort((a,b)=>a-b);
+
+      const idle = couriers.filter(c => c.status === "IDLE").length;
+      const busy = couriers.filter(c => c.status === "BUSY").length;
+      const online = idle + busy;
+      const util = online > 0 ? (busy / online) : null;
+
+      const avg = (arr) => arr.length ? (arr.reduce((s,x)=>s+x,0)/arr.length) : null;
+
+      return {
+        delivered_count: delivered.length,
+        on_time_rate: delivered.length ? (onTime / delivered.length) : null,
+        avg_delivery_sec: avg(deliveredTimes),
+        p90_delivery_sec: percentile(deliveredTimes, 0.90),
+        p95_delivery_sec: percentile(deliveredTimes, 0.95),
+
+        avg_late_sec: avg(lateSecs),
+        p95_late_sec: percentile(lateSecs, 0.95),
+        max_late_sec: lateSecs.length ? lateSecs[lateSecs.length-1] : null,
+
+        batch_rate: delivered.length ? (batchDeliveredCount / delivered.length) : null,
+
+        avg_time_in_bag_sec: avg(tibSecs),
+        cold_risk_count: coldRiskCount,
+        cold_risk_rate: delivered.length ? (coldRiskCount / delivered.length) : null,
+        bag_threshold_sec: bagThreshold,
+
+        idle_count: idle,
+        busy_count: busy,
+        online_count: online,
+        utilization: util,
+      };
+    }
+
+    function renderKpiCards(snap, derived){
+      const delivered = derived.delivered_count ?? 0;
+      document.getElementById("kDeliveredBig").textContent = String(delivered);
+      document.getElementById("kDeliveredSub").textContent =
+        `Pending now: ${snap.counts?.pending ?? "-"} · Fleet online: ${derived.online_count ?? "-"}`;
+
+      document.getElementById("kOnTimeRate").textContent = derived.on_time_rate == null ? "-" : pct(derived.on_time_rate);
+      document.getElementById("kOnTimeSub").textContent =
+        derived.avg_late_sec == null ? "Avg late: -" : `Avg late: ${(derived.avg_late_sec/60).toFixed(1)} min`;
+
+      document.getElementById("kAvgDel").textContent =
+        derived.avg_delivery_sec == null ? "-" : `${(derived.avg_delivery_sec/60).toFixed(1)} min`;
+      document.getElementById("kP90Del").textContent =
+        derived.p90_delivery_sec == null ? "P90: -" : `P90: ${(derived.p90_delivery_sec/60).toFixed(1)} min · P95: ${derived.p95_delivery_sec==null?"-":(derived.p95_delivery_sec/60).toFixed(1)} min`;
+
+      const coldRateTxt = derived.cold_risk_rate == null ? "-" : pct(derived.cold_risk_rate);
+      document.getElementById("kColdRisk").textContent = coldRateTxt;
+      document.getElementById("kColdSub").textContent =
+        `Threshold: ${(derived.bag_threshold_sec/60).toFixed(0)} min · Count: ${derived.cold_risk_count ?? "-"}`;
+
+      document.getElementById("kBatchRate").textContent = derived.batch_rate == null ? "-" : pct(derived.batch_rate);
+      document.getElementById("kBatchSub").textContent =
+        `Counts any order that was ever in a multi-order route (bundle size > 1).`;
+
+      document.getElementById("kUtil").textContent = derived.utilization == null ? "-" : pct(derived.utilization);
+      document.getElementById("kUtilSub").textContent = `Busy: ${derived.busy_count ?? "-"} · Idle: ${derived.idle_count ?? "-"}`;
+    }
+
+    function renderKpiDetailsTab(snap, derived){
+      const container = document.getElementById("kpiDetails");
+      container.innerHTML = "";
+
+      const addKpiCard = (title, rows) => {
+        const card = makeEl("div", { class:"kpiCard" }, [
+          makeEl("div", { class:"kpiLabel" }, [title]),
+        ]);
+        const kv = makeEl("div", { class:"miniKv", style:"grid-template-columns: 160px 1fr;" });
+        for (const [k,v] of rows){
+          kv.appendChild(makeEl("div", { class:"k" }, [k]));
+          kv.appendChild(makeEl("div", {}, [v]));
+        }
+        card.appendChild(kv);
+        container.appendChild(card);
+      };
+
+      addKpiCard("Speed", [
+        ["Avg delivery time", derived.avg_delivery_sec == null ? "-" : `${(derived.avg_delivery_sec/60).toFixed(1)} min`],
+        ["P90 delivery time", derived.p90_delivery_sec == null ? "-" : `${(derived.p90_delivery_sec/60).toFixed(1)} min`],
+        ["P95 delivery time", derived.p95_delivery_sec == null ? "-" : `${(derived.p95_delivery_sec/60).toFixed(1)} min`],
+      ]);
+
+      addKpiCard("Reliability (Delays)", [
+        ["On-time rate", derived.on_time_rate == null ? "-" : pct(derived.on_time_rate)],
+        ["Avg late", derived.avg_late_sec == null ? "-" : `${(derived.avg_late_sec/60).toFixed(1)} min`],
+        ["P95 late", derived.p95_late_sec == null ? "-" : `${(derived.p95_late_sec/60).toFixed(1)} min`],
+        ["Max late", derived.max_late_sec == null ? "-" : `${(derived.max_late_sec/60).toFixed(1)} min`],
+      ]);
+
+      addKpiCard("Food Quality (Cold-risk)", [
+        ["Avg time-in-bag", derived.avg_time_in_bag_sec == null ? "-" : `${(derived.avg_time_in_bag_sec/60).toFixed(1)} min`],
+        ["Cold-risk rate", derived.cold_risk_rate == null ? "-" : pct(derived.cold_risk_rate)],
+        ["Cold-risk count", String(derived.cold_risk_count ?? "-")],
+        ["Threshold", `${(derived.bag_threshold_sec/60).toFixed(0)} min`],
+      ]);
+
+      addKpiCard("Cost Proxy (Fleet)", [
+        ["Fleet utilization", derived.utilization == null ? "-" : pct(derived.utilization)],
+        ["Online couriers", String(derived.online_count ?? "-")],
+        ["Busy couriers", String(derived.busy_count ?? "-")],
+        ["Idle couriers", String(derived.idle_count ?? "-")],
+      ]);
+
+      addKpiCard("Batching", [
+        ["Batch rate (delivered)", derived.batch_rate == null ? "-" : pct(derived.batch_rate)],
+        ["How batching is detected", "Order was ever in a multi-order route (bundle size > 1)"],
+        ["Policy", String(snap.policy ?? "-")],
+        ["sim_t", fmtTimeHMS(snap.sim_t)],
+      ]);
+
+      document.getElementById("backendKpisRaw").textContent = JSON.stringify(snap.kpis || {}, null, 2);
+    }
+
+    // === RENDER (main) ===
+    function setText(id, v) {
+      document.getElementById(id).textContent = (v === null || typeof v === "undefined") ? "-" : String(v);
+    }
+
+    function renderSnapshot(snap) {
+      ingestOrderHistoryFromSnapshot(snap);
+
+      setText("kSimT", snap.sim_t);
+      setText("kPolicy", snap.policy);
+
+      const c = snap.counts || {};
+      setText("kPending", c.pending);
+      setText("kIdle", c.idle);
+      setText("kBusy", c.busy);
+      setText("kDelivered", c.delivered);
+
+      const k = snap.kpis || {};
+      setText("kDist", k.total_distance_km);
+      setText("kLate", k.avg_late_min);
+      setText("kWait", k.avg_wait_min);
+
+      const derived = computeDerivedKpis(snap);
+      renderKpiCards(snap, derived);
+
+      renderClustersFromSnapshot(snap);
+
+      // Map: couriers + routes
+      courierLayer.clearLayers();
+      stopLayer.clearLayers();
+      lineLayer.clearLayers();
+
+      const couriers = snap.couriers || [];
+      for (const cr of couriers) {
+        const status = cr.status || "OFFLINE";
+        const col = colorForCourierStatus(status);
+
+        const m = L.circleMarker([cr.lat, cr.lng], {
+          radius: 6,
+          weight: 2,
+          color: col,
+          fillColor: col,
+          fillOpacity: 0.9
+        }).addTo(courierLayer);
+
+        const assigned = normalizeAssignedOrderIds(cr.route || {});
+        m.bindPopup(
+          `<b>${cr.courier_id}</b><br/>` +
+          `status: ${status}<br/>` +
+          `vehicle: ${cr.vehicle_type}<br/>` +
+          `capacity: ${cr.bundle_capacity}<br/>` +
+          `route orders: ${assigned.length}`
+        );
+
+        if (cr.route && cr.route.stops && cr.route.stops.length > 0) {
+          const pts = [[cr.lat, cr.lng]];
+          for (const st of cr.route.stops) {
+            const stCol = colorForStopType(st.type);
+            const eta = stopEtaField(st);
+            L.circleMarker([st.lat, st.lng], {
+              radius: 5,
+              weight: 2,
+              color: stCol,
+              fillColor: stCol,
+              fillOpacity: 0.85
+            }).addTo(stopLayer)
+              .bindPopup(
+                `<b>${String(st.type || "").toUpperCase()}</b><br/>` +
+                `order: ${st.order_id ?? st.orderId}<br/>` +
+                `label: ${st.label}<br/>` +
+                `eta: ${fmtTimeHMS(eta)}`
+              );
+
+            pts.push([st.lat, st.lng]);
+          }
+          L.polyline(pts, { weight: 3, opacity: 0.85 }).addTo(lineLayer);
+        }
+      }
+
+      renderCourierCards(snap);
+      renderCompletedOrders(snap);
+      renderKpiDetailsTab(snap, derived);
+    }
+
+    // === CONTROL LOGIC (keep old functionality) ===
+    async function refreshState() {
+      try {
+        const snap = await getJson(`${API_BASE}/state`);
+        setBadge(simStatus, "Simulation: loaded", "ok");
+        lastSnapshot = snap;
+        log(snap);
+        renderSnapshot(snap);
+      } catch (e) {
+        setBadge(simStatus, "Simulation: not loaded", "warn");
+        log({ error: e.message });
+      }
+    }
+
+    function stopLocalRunner() {
+      if (stepTimer) {
+        clearInterval(stepTimer);
+        stepTimer = null;
+      }
+      setRunning(false);
+    }
+
+    async function startPolicy(policy) {
+      stopLocalRunner();
+      try {
+        // reset run-local history so batching is per-run
+        orderHistory.clear();
+
+        const snap = await postJson(`${API_BASE}/sim/start`, { policy });
+        await postJson(`${API_BASE}/sim/pause`, {});
+        setBadge(simStatus, "Simulation: loaded", "ok");
+        lastSnapshot = snap;
+        log(snap);
+        renderSnapshot(snap);
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function stepOnce(dt_sec) {
+      try {
+        const snap = await postJson(`${API_BASE}/sim/step`, { dt_sec });
+        setBadge(simStatus, "Simulation: loaded", "ok");
+        lastSnapshot = snap;
+        log(snap);
+        renderSnapshot(snap);
+      } catch (e) {
+        alert(e.message);
+        stopLocalRunner();
+      }
+    }
+
+    function resumeLocalRunner() {
+      const tick_ms = parseInt(document.getElementById("tickMs").value || "500", 10);
+      const dt_sec = parseInt(document.getElementById("dtSec").value || "10", 10);
+
+      stopLocalRunner();
+      setRunning(true);
+
+      stepTimer = setInterval(() => {
+        stepOnce(dt_sec);
+      }, Math.max(50, tick_ms));
+    }
+
+    async function spawnRandom() {
+      stopLocalRunner();
+      try {
+        const n_orders = parseInt(document.getElementById("spawnOrders").value || "0", 10);
+        const n_couriers = parseInt(document.getElementById("spawnCouriers").value || "0", 10);
+
+        if (n_orders > 0) await postJson(`${API_BASE}/spawn/orders`, { n: n_orders });
+        if (n_couriers > 0) await postJson(`${API_BASE}/spawn/couriers`, { n: n_couriers });
+
+        await refreshState();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // === UI wiring ===
+    document.getElementById("btnLoad").onclick = async () => {
+      stopLocalRunner();
+      try {
+        // reset run-local history on reload
+        orderHistory.clear();
+
+        const out = await postJson(`${API_BASE}/load`, {});
+        log(out);
+        await refreshState();
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    document.getElementById("btnConnect").onclick = () => connectWS();
+    document.getElementById("btnDisconnect").onclick = () => disconnectWS();
+
+    document.getElementById("btnStartBaseline").onclick = () => startPolicy("baseline");
+    document.getElementById("btnStartOba").onclick = () => startPolicy("oba");
+
+    document.getElementById("btnResume").onclick = () => resumeLocalRunner();
+    document.getElementById("btnPause").onclick = async () => {
+      stopLocalRunner();
+      try { await postJson(`${API_BASE}/sim/pause`, {}); } catch (_) {}
+    };
+
+    document.getElementById("btnStep").onclick = () => {
+      stopLocalRunner();
+      const dt_sec = parseInt(document.getElementById("dtSec").value || "10", 10);
+      stepOnce(dt_sec);
+    };
+
+    document.getElementById("btnSpawn").onclick = () => spawnRandom();
+
+    document.getElementById("showClusters").onchange = () => { if (lastSnapshot) renderSnapshot(lastSnapshot); };
+    document.getElementById("sameRestaurantOnly").onchange = () => { if (lastSnapshot) renderSnapshot(lastSnapshot); };
+    document.getElementById("courierSearch").oninput = () => { if (lastSnapshot) renderCourierCards(lastSnapshot); };
+
+    document.getElementById("completedSearch").oninput = () => { if (lastSnapshot) renderCompletedOrders(lastSnapshot); };
+    document.getElementById("filterLateOnly").onchange = () => { if (lastSnapshot) renderCompletedOrders(lastSnapshot); };
+    document.getElementById("filterBatchOnly").onchange = () => { if (lastSnapshot) renderCompletedOrders(lastSnapshot); };
+    document.getElementById("filterColdOnly").onchange = () => { if (lastSnapshot) renderCompletedOrders(lastSnapshot); };
+
+    // Boot
+    connectWS();
+    refreshState();
+    setRunning(false);
+    setRightCollapsed(false);
+    setActiveTab("couriers");
+  </script>
+</body>
+</html>

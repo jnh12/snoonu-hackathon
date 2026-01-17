@@ -1,0 +1,51 @@
+courier_id,available_from,starting_area_hint,courier_lat,courier_lng,vehicle_type,bundle_capacity
+CR-DOH-0001,19:04:41,Al Sadd / Bin Mahmoud,25.289289,51.491,bike,2
+CR-DOH-0002,19:09:18,Al Sadd / Bin Mahmoud,25.279291,51.49255,bike,4
+CR-DOH-0003,19:03:43,Al Sadd / Bin Mahmoud,25.284938,51.491096,bike,4
+CR-DOH-0004,19:09:18,Al Sadd / Bin Mahmoud,25.28854,51.501725,car,2
+CR-DOH-0005,19:00:06,Al Sadd / Bin Mahmoud,25.285484,51.496064,bike,4
+CR-DOH-0006,19:03:40,Al Sadd / Bin Mahmoud,25.284952,51.496057,car,2
+CR-DOH-0007,19:05:52,Al Sadd / Bin Mahmoud,25.278355,51.492434,motorbike,3
+CR-DOH-0008,19:09:09,Al Sadd / Bin Mahmoud,25.292643,51.505095,bike,3
+CR-DOH-0009,19:06:10,Msheireb / Souq Waqif,25.279076,51.530364,motorbike,2
+CR-DOH-0010,19:03:53,Msheireb / Souq Waqif,25.291591,51.525416,car,2
+CR-DOH-0011,19:06:29,Msheireb / Souq Waqif,25.294606,51.54183,car,3
+CR-DOH-0012,19:06:19,Msheireb / Souq Waqif,25.290214,51.531797,car,2
+CR-DOH-0013,19:01:13,Msheireb / Souq Waqif,25.290904,51.538536,motorbike,4
+CR-DOH-0014,19:02:47,Msheireb / Souq Waqif,25.280923,51.539083,car,3
+CR-DOH-0015,19:09:30,Msheireb / Souq Waqif,25.282899,51.543008,bike,4
+CR-DOH-0016,19:00:57,West Bay / Dafna,25.326783,51.53944,bike,2
+CR-DOH-0017,19:01:07,West Bay / Dafna,25.338321,51.530628,bike,4
+CR-DOH-0018,19:08:31,West Bay / Dafna,25.340033,51.528552,car,4
+CR-DOH-0019,19:04:12,West Bay / Dafna,25.330012,51.527357,motorbike,4
+CR-DOH-0020,19:07:18,West Bay / Dafna,25.331935,51.538928,motorbike,3
+CR-DOH-0021,19:02:21,West Bay / Dafna,25.327688,51.544936,motorbike,3
+CR-DOH-0022,19:01:52,West Bay / Dafna,25.321182,51.522131,bike,4
+CR-DOH-0023,19:01:05,West Bay / Dafna,25.32284,51.537332,car,3
+CR-DOH-0024,19:04:17,The Pearl,25.367418,51.549361,motorbike,2
+CR-DOH-0025,19:09:09,The Pearl,25.369106,51.542291,car,4
+CR-DOH-0026,19:02:41,The Pearl,25.362304,51.54587,car,2
+CR-DOH-0027,19:04:29,The Pearl,25.374576,51.557517,motorbike,2
+CR-DOH-0028,19:05:05,The Pearl,25.365654,51.542128,motorbike,4
+CR-DOH-0029,19:02:45,The Pearl,25.367679,51.543057,motorbike,4
+CR-DOH-0030,19:08:20,The Pearl,25.37387,51.551979,bike,2
+CR-DOH-0031,19:05:14,Al Waab / Aziziya,25.274015,51.462604,bike,2
+CR-DOH-0032,19:01:20,Al Waab / Aziziya,25.254744,51.453886,bike,4
+CR-DOH-0033,19:09:05,Al Waab / Aziziya,25.261608,51.439938,bike,2
+CR-DOH-0034,19:02:49,Al Waab / Aziziya,25.266473,51.464512,car,4
+CR-DOH-0035,19:03:36,Al Waab / Aziziya,25.272428,51.449848,motorbike,4
+CR-DOH-0036,19:06:48,Al Waab / Aziziya,25.267316,51.457963,motorbike,4
+CR-DOH-0037,19:07:42,Al Waab / Aziziya,25.258456,51.463189,bike,2
+CR-DOH-0038,19:09:27,Lusail Marina / Fox Hills,25.410292,51.523966,bike,4
+CR-DOH-0039,19:01:00,Lusail Marina / Fox Hills,25.410166,51.516488,bike,2
+CR-DOH-0040,19:01:12,Lusail Marina / Fox Hills,25.429352,51.53857,motorbike,2
+CR-DOH-0041,19:09:12,Lusail Marina / Fox Hills,25.411797,51.528092,bike,4
+CR-DOH-0042,19:08:04,Lusail Marina / Fox Hills,25.430194,51.530489,bike,3
+CR-DOH-0043,19:01:39,Lusail Marina / Fox Hills,25.42661,51.519831,motorbike,3
+CR-DOH-0044,19:00:55,Lusail Marina / Fox Hills,25.41392,51.526011,motorbike,4
+CR-DOH-0045,19:06:52,Najma / Al Hilal / Old Airport,25.277993,51.545149,motorbike,3
+CR-DOH-0046,19:03:16,Najma / Al Hilal / Old Airport,25.272119,51.545497,bike,4
+CR-DOH-0047,19:04:45,Najma / Al Hilal / Old Airport,25.260856,51.5555,car,2
+CR-DOH-0048,19:09:23,Najma / Al Hilal / Old Airport,25.274484,51.544412,bike,2
+CR-DOH-0049,19:00:15,Najma / Al Hilal / Old Airport,25.267369,51.559299,bike,2
+CR-DOH-0050,19:03:38,Najma / Al Hilal / Old Airport,25.251822,51.557541,car,2

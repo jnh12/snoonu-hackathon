@@ -36,15 +36,16 @@ _ws_clients: Set[WebSocket] = set()
 _sim_running = False
 _last_ws_push = 0.0
 
+from typing import Optional
+from pydantic import BaseModel
 
 class LoadBody(BaseModel):
-    orders_path: str | None = None
-    couriers_path: str | None = None
-
+    orders_path: Optional[str] = None
+    couriers_path: Optional[str] = None
 
 class SimStartBody(BaseModel):
     policy: Policy = "baseline"
-    start_time_sec: int | None = None
+    start_time_sec: Optional[int] = None
 
 
 class SimStepBody(BaseModel):

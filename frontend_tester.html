@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Snoonu Ops Dashboard – Hackathon Simulation</title>
+  <title>Snoonu Ops Dashboard</title>
 
   <!-- Leaflet (CDN) -->
   <link
@@ -19,6 +19,45 @@
   ></script>
 
   <style>
+  /* === Animated route/cluster lines === */
+@keyframes dashFlow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -120; }
+}
+
+.leaflet-interactive.routeLine,
+.leaflet-interactive.clusterSpoke {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 10 10;
+  animation: dashFlow 1.2s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+  opacity: 0.95;
+}
+
+.leaflet-interactive.routeLine {
+  stroke-width: 4;
+}
+
+.leaflet-interactive.clusterSpoke {
+  stroke-width: 2;
+  opacity: 0.7;
+  animation-duration: 1.6s;
+}
+
+/* Direction arrow marker (div icon) */
+.dirArrow {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid var(--col, #111);
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+  opacity: 0.95;
+}
+
+
     :root{
       --leftW: 380px;
       --rightW: 420px;
@@ -28,10 +67,15 @@
       --bg: #ffffff;
       --muted: #666;
 
-      --brand: #0b5cff;
+      --brand: #dc091e;
       --ok: #19a974;
       --warn: #ff9500;
       --err: #ff3b30;
+
+      --primary: #dc091e;     /* requested primary */
+      --idleColor: var(--ok);
+      --busyColor: var(--primary);
+      --offColor: #6b7280;
     }
 
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: #111; }
@@ -200,13 +244,37 @@
 
     .cards { display: grid; gap: 10px; padding-bottom: 14px; margin-top: 10px; }
 
-    details.courierCard{
+        details.courierCard{
       border: 1px solid var(--cardBorder);
       border-radius: 16px;
       padding: 8px 10px;
       box-shadow: 0 1px 0 rgba(0,0,0,0.03);
       background: #fff;
+
+      /* NEW: availability accent */
+      border-left: 6px solid rgba(0,0,0,0.12);
+      overflow: hidden;
+      transition: transform 120ms ease, box-shadow 120ms ease;
     }
+    details.courierCard:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+    }
+
+    /* NEW: availability themes */
+    details.courierCard.avail-idle{
+      border-left-color: var(--idleColor);
+      background: linear-gradient(180deg, rgba(25,169,116,0.06), rgba(25,169,116,0.00));
+    }
+    details.courierCard.avail-busy{
+      border-left-color: var(--busyColor);
+      background: linear-gradient(180deg, rgba(220,9,30,0.08), rgba(220,9,30,0.00));
+    }
+    details.courierCard.avail-offline{
+      border-left-color: var(--offColor);
+      background: linear-gradient(180deg, rgba(107,114,128,0.06), rgba(107,114,128,0.00));
+    }
+
     details.courierCard summary{
       list-style: none;
       cursor: pointer;
@@ -221,6 +289,34 @@
     }
     details.courierCard summary::-webkit-details-marker { display:none; }
 
+    /* NEW: nicer left title layout */
+    .cardTitle{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .statusDot{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #bbb;
+      box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+      flex: 0 0 auto;
+    }
+    details.courierCard.avail-idle .statusDot{
+      background: var(--idleColor);
+      box-shadow: 0 0 0 4px rgba(25,169,116,0.12);
+    }
+    details.courierCard.avail-busy .statusDot{
+      background: var(--busyColor);
+      box-shadow: 0 0 0 4px rgba(220,9,30,0.14);
+    }
+    details.courierCard.avail-offline .statusDot{
+      background: var(--offColor);
+      box-shadow: 0 0 0 4px rgba(107,114,128,0.12);
+    }
+
+    /* Pills: keep your style, just tint + make BUSY use #dc091e */
     .pill{
       font-size: 11px;
       padding: 2px 8px;
@@ -228,10 +324,23 @@
       border: 1px solid #ddd;
       font-weight: 900;
       white-space: nowrap;
+      background: rgba(255,255,255,0.65);
     }
-    .pill.idle{ color: var(--ok); border-color: rgba(25,169,116,0.55); }
-    .pill.busy{ color: var(--warn); border-color: rgba(255,149,0,0.55); }
-    .pill.off{ color:#777; border-color:#bbb; }
+    .pill.idle{
+      color: var(--idleColor);
+      border-color: rgba(25,169,116,0.55);
+      background: rgba(25,169,116,0.08);
+    }
+    .pill.busy{
+      color: var(--busyColor);
+      border-color: rgba(220,9,30,0.55);
+      background: rgba(220,9,30,0.10);
+    }
+    .pill.off{
+      color: var(--offColor);
+      border-color: rgba(107,114,128,0.45);
+      background: rgba(107,114,128,0.08);
+    }
 
     .cardBody{
       display:grid;
@@ -375,11 +484,19 @@
     <!-- LEFT PANEL -->
     <div class="panel left">
       <div class="hero">
-        <h2 style="margin:0;">Ops Dashboard</h2>
-        <p>
-          Compare <b>Baseline</b> vs <b>Optimized (OBA)</b> dispatch. Watch fleet movement on the map and track delivery KPIs
-          (speed, delays, batching, cold-risk).
-        </p>
+        <img
+    src="./assets/snoonu-Logo.png"
+    alt="Ops Dashboard banner"
+    width="679"
+    height="142"
+    style="
+      display:block;
+      margin-top:10px;
+      max-width:100%;
+      height:auto;
+      border-radius:12px;
+    "
+  />
       </div>
 
       <div class="row" style="margin-top:12px;">
@@ -390,8 +507,8 @@
 
       <div class="row">
         <button id="btnLoad" class="btnPrimary">Load Doha dataset</button>
-        <button id="btnStartBaseline" class="btnGhost">Baseline</button>
-        <button id="btnStartOba" class="btnGhost">Optimized (OBA)</button>
+        <button id="btnStartBaseline" class="btnGhost">Baseline Test</button>
+        <button id="btnStartOba" class="btnGhost">Optimized with Batching</button>
       </div>
 
       <div class="row">
@@ -447,14 +564,11 @@
           Same restaurant only
         </label>
       </div>
-      <div class="muted">
-        Clusters use pickup 1000m + dropoff 1600m radii (matches default config).
-      </div>
 
       <div class="hr"></div>
 
       <details class="advanced">
-        <summary>Advanced controls (keep for dev / hackathon)</summary>
+        <summary>Advanced controls</summary>
 
         <div class="row" style="margin-top:10px;">
           <button id="btnConnect">Connect live updates (WS)</button>
@@ -603,11 +717,12 @@
     const orderLayer = L.layerGroup().addTo(map);
     const clusterLineLayer = L.layerGroup().addTo(map);
 
-    function colorForCourierStatus(status) {
-      if (status === "IDLE") return "#19a974";
-      if (status === "BUSY") return "#ff9500";
-      return "#8e8e93";
-    }
+function colorForCourierStatus(status) {
+  if (status === "IDLE") return "#19a974";
+  if (status === "BUSY") return "#dc091e"; // primary
+  return "#8e8e93";
+}
+
     function colorForStopType(type) {
       if (type === "pickup") return "#2d7ff9";
       if (type === "dropoff") return "#b200ff";
@@ -1106,10 +1221,22 @@
 
         if (q && !searchable.includes(q)) continue;
 
-        const details = makeEl("details", { class: "courierCard" });
-        if (c.status === "BUSY") details.open = true;
+const details = makeEl("details", { class: "courierCard" });
 
-        const left = makeEl("div", {}, [String(c.courier_id)]);
+const availClass =
+  c.status === "BUSY" ? "avail-busy" :
+  c.status === "IDLE" ? "avail-idle" :
+  "avail-offline";
+
+details.classList.add(availClass);
+
+if (c.status === "BUSY") details.open = true;
+
+
+const left = makeEl("div", { class: "cardTitle" }, [
+  makeEl("span", { class: "statusDot" }),
+  makeEl("span", {}, [String(c.courier_id)])
+]);
         const pill = makeEl("span", { class: pillClassForStatus(c.status) }, [statusLabel(c.status)]);
         const summary = makeEl("summary", {}, [left, pill]);
 
@@ -1554,7 +1681,45 @@
 
             pts.push([st.lat, st.lng]);
           }
-          L.polyline(pts, { weight: 3, opacity: 0.85 }).addTo(lineLayer);
+if (cr.route && cr.route.stops && cr.route.stops.length > 0) {
+  // Build segments: courier -> stop1, stop1 -> stop2, ...
+  const start = [cr.lat, cr.lng];
+  let prevPt = start;
+  let prevLabel = `Courier ${cr.courier_id}`;
+
+  for (let i = 0; i < cr.route.stops.length; i++) {
+    const st = cr.route.stops[i];
+    const nextPt = [st.lat, st.lng];
+
+    // Color by what we're heading TO
+    const segColor =
+      st.type === "pickup"  ? "#2d7ff9" :
+      st.type === "dropoff" ? "#b200ff" :
+      "#dc091e";
+
+    const toLabel = stopLabel(st);
+
+    const seg = L.polyline([prevPt, nextPt], {
+      color: segColor,
+      weight: 4,
+      opacity: 0.95,
+      dashArray: "10 10",
+      className: "routeLine"
+    }).addTo(lineLayer);
+
+    // Show from -> to on hover/click
+    seg.bindTooltip(
+      `<b>Route</b><br/>From: ${prevLabel}<br/>To: ${toLabel}`,
+      { sticky: true, direction: "top", opacity: 0.95 }
+    );
+
+    // Direction arrow on the segment
+    addDirArrow(lineLayer, prevPt, nextPt, segColor);
+
+    prevPt = nextPt;
+    prevLabel = toLabel;
+  }
+}
         }
       }
 
@@ -1692,6 +1857,45 @@
     setRunning(false);
     setRightCollapsed(false);
     setActiveTab("couriers");
+
+    function bearingDeg(a, b){
+  // a,b = [lat,lng]
+  const toRad = (x) => x * Math.PI / 180;
+  const toDeg = (x) => x * 180 / Math.PI;
+  const lat1 = toRad(a[0]), lon1 = toRad(a[1]);
+  const lat2 = toRad(b[0]), lon2 = toRad(b[1]);
+  const dLon = lon2 - lon1;
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  const brng = Math.atan2(y, x);
+  return (toDeg(brng) + 360) % 360;
+}
+
+function midpoint(a, b){
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+function addDirArrow(layerGroup, from, to, color){
+  const rot = bearingDeg(from, to);
+  const mid = midpoint(from, to);
+
+  const icon = L.divIcon({
+    className: "",
+    html: `<div class="dirArrow" style="--rot:${rot}deg;--col:${color};"></div>`,
+    iconSize: [1,1]
+  });
+
+  return L.marker(mid, { icon, interactive: false }).addTo(layerGroup);
+}
+
+function stopLabel(st){
+  const oid = st.order_id ?? st.orderId ?? "-";
+  const t = (st.type || "").toUpperCase();
+  const lbl = st.label || "";
+  return `${t} · ${oid}${lbl ? " · " + lbl : ""}`;
+}
+
   </script>
 </body>
 </html>
